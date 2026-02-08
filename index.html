@@ -1,0 +1,128 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Status Drafter - Login</title>
+    <link rel="stylesheet" href="style.css">
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        .role-btn {
+            padding: 0.75rem;
+            border: 1px solid var(--border-color);
+            background: white;
+            border-radius: 6px;
+            cursor: pointer;
+            font-weight: 500;
+            transition: all 0.2s;
+            width: 100%;
+        }
+
+        .role-btn.active {
+            background: var(--primary-color);
+            color: white;
+            border-color: var(--primary-color);
+        }
+
+        /* Specialized Manager Button Style */
+        .role-btn[data-role="manager"].active {
+            background: var(--secondary-color);
+            border-color: var(--secondary-color);
+        }
+    </style>
+</head>
+
+<body>
+    <div class="auth-container">
+        <!-- Landing Options (Initial State) -->
+        <div id="landing-options" class="card auth-card p-6">
+            <div class="text-center mb-6">
+                <h1 style="color: var(--primary-color);">Status Drafter</h1>
+                <p>Select your portal to login</p>
+            </div>
+
+            <div class="flex flex-col gap-4 mb-4">
+                <button onclick="showLogin('employee')" class="btn w-full"
+                    style="background: var(--primary-color); color: white;">Employee Login</button>
+                <button onclick="showLogin('manager')" class="btn w-full"
+                    style="background: var(--secondary-color); color: white;">Manager Login</button>
+            </div>
+
+            <div class="divider my-4" style="border-top: 1px solid #eee; margin: 1.5rem 0;"></div>
+
+            <div class="text-center">
+                <p style="font-size: 0.9rem;">New here?</p>
+                <button onclick="toggleAuth('signup')" class="btn btn-outline w-full mt-2">Create Account</button>
+            </div>
+        </div>
+
+        <!-- Login Form (Hidden by default) -->
+        <div id="login-form" class="card auth-card p-6 hidden">
+            <button onclick="backToLanding()" class="btn btn-outline mb-4"
+                style="padding: 0.25rem 0.5rem; font-size: 0.8rem;">← Back</button>
+
+            <div class="text-center mb-4">
+                <h2 id="login-title" style="color: var(--primary-color);">Employee Login</h2>
+                <p>Welcome back!</p>
+            </div>
+
+            <form onsubmit="handleLogin(event)">
+                <input type="hidden" id="selected-role" value="employee">
+
+                <div class="input-group">
+                    <label for="login-email">Email Address</label>
+                    <input type="email" id="login-email" placeholder="you@company.com" required>
+                </div>
+                <div class="input-group">
+                    <label for="login-password">Password</label>
+                    <input type="password" id="login-password" placeholder="••••••••" required>
+                </div>
+
+                <button type="submit" id="login-submit-btn" class="btn btn-primary w-full">Login</button>
+            </form>
+        </div>
+
+        <!-- Signup Form (Hidden by default) -->
+        <div id="signup-form" class="card auth-card p-6 hidden">
+            <button onclick="backToLanding()" class="btn btn-outline mb-4"
+                style="padding: 0.25rem 0.5rem; font-size: 0.8rem;">← Back</button>
+
+            <div class="text-center mb-4">
+                <h1 style="color: var(--primary-color);">Join Team</h1>
+                <p>Create your account to get started.</p>
+            </div>
+
+            <form onsubmit="handleSignup(event)">
+                <div class="input-group">
+                    <label for="signup-name">Full Name</label>
+                    <input type="text" id="signup-name" placeholder="John Doe" required>
+                </div>
+                <div class="input-group">
+                    <label for="signup-email">Email Address</label>
+                    <input type="email" id="signup-email" placeholder="you@company.com" required>
+                </div>
+                <div class="input-group">
+                    <label for="signup-role">I am a...</label>
+                    <select id="signup-role">
+                        <option value="employee">Employee</option>
+                        <option value="manager">Manager</option>
+                    </select>
+                </div>
+                <div class="input-group">
+                    <label for="signup-password">Password</label>
+                    <input type="password" id="signup-password" placeholder="••••••••" required>
+                </div>
+
+                <button type="submit" class="btn btn-primary w-full">Create Account</button>
+            </form>
+        </div>
+    </div>
+
+    <div id="toast-container"></div>
+    <script src="deployment-config.js"></script>
+    <script src="script.js"></script>
+</body>
+
+</html>

@@ -1,0 +1,263 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Manager Dashboard - Status Drafter</title>
+    <link rel="stylesheet" href="style.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+</head>
+
+<body>
+    <nav class="navbar">
+        <div class="container flex justify-between items-center">
+            <div class="flex items-center gap-2">
+                <button id="mobile-menu-btn" class="btn btn-outline md:hidden" style="padding: 0.25rem 0.5rem;"
+                    onclick="toggleSidebar()">
+                    ☰
+                </button>
+                <a href="#" class="navbar-brand">
+                    <span>Status Drafter</span>
+                    <span class="badge" style="background: var(--secondary-color); color: white;">Manager</span>
+                </a>
+                <span id="user-greeting" style="font-weight: 500;">Hello, Manager</span>
+
+            </div>
+
+            <!-- Desktop Nav -->
+            <div class="flex items-center gap-4 desktop-nav">
+                <button onclick="showMembersModal()" class="btn btn-outline btn-sm">
+                    Employees
+                </button>
+                <button onclick="showRepliesModal()" class="btn btn-outline btn-sm">
+                    💬 Replies
+                </button>
+                <button onclick="openAssignTaskModal()" class="btn btn-primary btn-sm">
+                    + Assign Task
+                </button>
+            </div>
+            <button onclick="logout()" class="btn btn-outline" style="font-size: 0.85rem;">Logout</button>
+        </div>
+    </nav>
+
+    <!-- Scripts for PDF Generation -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.25/jspdf.plugin.autotable.min.js"></script>
+
+    <!-- Mobile Sidebar -->
+    <div id="mobile-sidebar" class="sidebar hidden">
+        <div class="sidebar-content flex flex-col">
+            <div class="p-4 border-bottom flex justify-between items-center bg-gray-50">
+                <div>
+                    <h3 class="m-0 text-base">Status Drafter</h3>
+                    <span class="text-xs text-muted">Manager Portal</span>
+                </div>
+                <button onclick="toggleSidebar()" class="text-xl p-2 hover:bg-gray-200 rounded">&times;</button>
+            </div>
+
+            <div class="p-4 flex-1">
+                <div class="flex flex-col gap-1">
+                    <div class="text-xs font-bold text-muted uppercase mb-2">Account</div>
+                    <div class="flex items-center gap-3 p-2 rounded bg-gray-50 mb-4">
+                        <div
+                            class="w-8 h-8 rounded-full bg-secondary text-white flex items-center justify-center text-sm font-bold">
+                            M</div>
+                        <div>
+                            <div class="font-medium text-sm">Manager</div>
+                            <div class="text-xs text-muted">Signed In</div>
+                        </div>
+                    </div>
+
+                    <div class="text-xs font-bold text-muted uppercase mb-2">Menu</div>
+                    <button onclick="logout()" class="sidebar-item">
+                        <span>🚪</span> Logout
+                    </button>
+                </div>
+            </div>
+
+            <div class="p-4 border-top text-center text-xs text-muted">
+                v2.0 Mobile
+            </div>
+        </div>
+        <div class="sidebar-backdrop" onclick="toggleSidebar()"></div>
+    </div>
+
+    <main class="container p-6">
+        <div class="flex flex-col gap-4">
+            <!-- Global Actions & Stats -->
+            <div class="flex flex-col gap-4 mb-2">
+                <!-- Stats Row -->
+                <div class="flex gap-4">
+                    <div class="card p-4 w-full flex items-center justify-between cursor-pointer hover-scale"
+                        onclick="showMembersModal()">
+                        <div>
+                            <p class="text-sm text-muted">Total Members</p>
+                            <h2 id="total-members" class="m-0">0</h2>
+                        </div>
+                        <div style="font-size: 1.5rem;">👥</div>
+                    </div>
+                    <div class="card p-4 w-full flex items-center justify-between cursor-pointer hover-scale"
+                        onclick="showTodaysUpdates()">
+                        <div>
+                            <p class="text-sm text-muted">updates today</p>
+                            <h2 id="updates-today" class="m-0" style="color: var(--primary-color);">0</h2>
+                        </div>
+                        <div style="font-size: 1.5rem;">📅</div>
+                    </div>
+                    <div class="card p-4 w-full flex items-center justify-between cursor-pointer hover-scale"
+                        onclick="showRepliesModal()">
+                        <div>
+                            <p class="text-sm text-muted">Inbox (Blocked)</p>
+                            <h2 id="pending-blockers" class="m-0" style="color: var(--danger-color);">0</h2>
+                        </div>
+                        <div style="font-size: 1.5rem;">🔔</div>
+                    </div>
+                </div>
+
+                <!-- Reports Bar -->
+                <div class="card p-3 flex gap-2 items-center justify-between flex-wrap">
+                    <span style="font-weight: 500;">Pending Reports:</span>
+                    <div class="flex gap-2">
+                        <button onclick="showPendingReport('day')" class="btn btn-outline btn-sm">Daily Pending
+                            (Yesterday)</button>
+                        <button onclick="showPendingReport('week')" class="btn btn-outline btn-sm">Weekly
+                            Pending</button>
+                        <button onclick="showPendingReport('month')" class="btn btn-outline btn-sm">Monthly
+                            Pending</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Team Surveillance & Feed -->
+            <div id="team-grid" class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                <!-- Main Feed (Team Status) -->
+                <div class="lg:col-span-2">
+                    <div class="flex items-center gap-2 mb-4">
+                        <h3 class="m-0">📋 Team Status Feed</h3>
+                        <div class="h-px bg-gray-200 flex-1 ml-2"></div>
+                    </div>
+                    <div id="team-feed" class="flex flex-col gap-4">
+                        <div class="text-center p-8 text-muted bg-gray-50 rounded border border-dashed">
+                            Loading team activity...
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Surveillance Sidebar (Missing Updates) -->
+                <div class="lg:col-span-1">
+                    <div class="flex items-center gap-2 mb-4">
+                        <h3 class="m-0">🚨 Pulse & Surveillance</h3>
+                    </div>
+                    <div class="card p-4 bg-gray-900 text-white mb-4">
+                        <p class="text-xs text-gray-400 uppercase font-bold mb-1">Status Summary</p>
+                        <div class="flex justify-between items-center">
+                            <span>Missing Today</span>
+                            <span id="missing-count-badge" class="badge bg-red-600 text-white">0</span>
+                        </div>
+                    </div>
+                    <div id="missing-updates-list" class="flex flex-col gap-3">
+                        <div class="text-center p-4 text-muted text-sm italic">Checking attendance...</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Members Modal -->
+        <div id="members-modal" class="hidden"
+            style="position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); display: flex; align-items: center; justify-content: center; z-index: 1050;">
+            <div class="card p-6 flex flex-col" style="width: 90%; max-width: 800px; max-height: 80vh;">
+                <div class="flex justify-between items-center mb-4">
+                    <h3>All Team Members</h3>
+                    <button onclick="closeMembersModal()" class="text-xl">&times;</button>
+                </div>
+                <div id="members-table-container" style="overflow-y: auto; flex: 1;">
+                    <!-- Table goes here -->
+                </div>
+                <div class="flex justify-end mt-4 pt-2 border-top">
+                    <button onclick="closeMembersModal()" class="btn btn-primary">Close</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Generic Report Modal -->
+        <div id="report-modal" class="hidden"
+            style="position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); display: flex; align-items: center; justify-content: center; z-index: 1050;">
+            <div class="card p-6 flex flex-col" style="width: 90%; max-width: 600px; max-height: 80vh;">
+                <div class="flex justify-between items-center mb-4">
+                    <h3 id="report-title">Report</h3>
+                    <button onclick="closeReportModal()" class="text-xl">&times;</button>
+                </div>
+                <div id="report-content" style="overflow-y: auto; flex: 1;">
+                    <!-- Report items -->
+                </div>
+                <div class="flex justify-end mt-4 pt-2 border-top">
+                    <button onclick="closeReportModal()" class="btn btn-primary">Close</button>
+                </div>
+            </div>
+        </div>
+        <!-- Assign Task Modal -->
+        <div id="assign-task-modal" class="hidden"
+            style="position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); display: flex; align-items: center; justify-content: center; z-index: 1055;">
+            <div class="card p-6 flex flex-col" style="width: 90%; max-width: 450px;">
+                <div class="flex justify-between items-center mb-4">
+                    <h3>Assign New Task</h3>
+                    <button onclick="closeAssignTaskModal()"
+                        class="text-xl hover:bg-gray-100 rounded p-1">&times;</button>
+                </div>
+
+                <form onsubmit="submitAssignedTask(event)">
+                    <div class="input-group">
+                        <label for="assign-text">Task Description (The Work)</label>
+                        <textarea id="assign-text" rows="3" placeholder="Enter the work details..." required
+                            class="w-full"></textarea>
+                    </div>
+
+                    <div class="input-group">
+                        <label for="assign-employee">Select Employee</label>
+                        <select id="assign-employee" required class="w-full">
+                            <option value="">Loading employees...</option>
+                        </select>
+                    </div>
+
+                    <div class="input-group">
+                        <label for="assign-deadline">Time / Deadline</label>
+                        <input type="datetime-local" id="assign-deadline" class="w-full">
+                    </div>
+
+                    <div class="flex justify-end gap-2 mt-4">
+                        <button type="button" onclick="closeAssignTaskModal()" class="btn btn-outline">Cancel</button>
+                        <button type="submit" class="btn btn-primary">Send Message</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </main>
+
+    <!-- Reply Modal -->
+    <div id="reply-modal" class="hidden"
+        style="position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); display: flex; align-items: center; justify-content: center; z-index: 1200;">
+        <div class="card p-6" style="width: 100%; max-width: 400px; box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);">
+            <h3 class="mb-4">Reply to Task</h3>
+            <p id="reply-task-preview" class="mb-4 text-muted" style="font-style: italic;"></p>
+            <textarea id="reply-text" class="w-full mb-4 p-2 border rounded" rows="3"
+                placeholder="Enter your reply/guidance..."></textarea>
+            <div class="flex justify-end gap-2">
+                <button onclick="closeReplyModal()" class="btn btn-outline">Cancel</button>
+                <button onclick="sendReply()" class="btn btn-primary">Send Reply</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="toast-container"></div>
+    <script src="deployment-config.js"></script>
+    <script src="script.js"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            checkAuth('manager');
+            loadManagerDashboard();
+        });
+    </script>
+</body>
+
+</html>
