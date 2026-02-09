@@ -10,7 +10,7 @@
 
     // Production Backend URL (REPLACE THIS with your actual Render/Deployment URL)
     // Example: 'https://status-drafter-backend.onrender.com/api'
-    const PROD_API = 'https://status-drafter-backend.onrender.com/api';
+    const PROD_API = 'https://stautstool.vercel.app/api';
 
     // Set the global API_URL based on the environment
     window.API_URL = isLocal ? LOCAL_API : PROD_API;
