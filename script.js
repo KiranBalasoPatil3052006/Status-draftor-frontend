@@ -262,47 +262,51 @@ function renderColumn(type, tasks) {
                 <div class="mt-2">
                     <button onclick="openViewReplyModal('${cleanReply}', '${cleanDate}')" 
                         class="btn btn-xs btn-outline" 
-                        style="color: var(--primary-color); border-color: var(--primary-color); background: #fff7ed;">
-                        📩 View Manager Reply
+                        style="color: ${task.isFeedbackEdited ? '#ea580c' : 'var(--primary-color)'}; border-color: ${task.isFeedbackEdited ? '#ea580c' : 'var(--primary-color)'}; background: ${task.isFeedbackEdited ? '#fff7ed' : '#f0f9ff'};">
+                        ${task.isFeedbackEdited ? '📝 Feedback Updated' : '📩 View Manager Reply'}
                     </button>
+                    ${task.isFeedbackEdited ? '<span class="text-xs text-muted ml-2">(Edited)</span>' : ''}
                 </div>`;
         }
 
-        // HTML Content
-        const htmlContent = `
-            <div style="flex: 1; padding-right: 10px;">
-                <div style="font-weight: 500; font-size: 0.95rem; cursor: pointer;" onclick="openEditModal('${task._id}', '${task.text.replace(/'/g, "\\'")}', '${type}', '${(task.blockerReason || '').replace(/'/g, "\\'")}')">${task.text}</div>
-                ${extraInfo}
-            </div>
-            <div class="flex items-center gap-2">
-                ${actions}
-                <button onclick="openDeleteModal('${task._id}', event)" class="btn btn-xs" style="background: none; border: none; color: var(--danger-color); font-size: 1.2rem; line-height: 1; cursor: pointer;">&times;</button>
-            </div>
-        `;
-
         // Check if exists
         let taskEl = document.getElementById(`task-${taskId}`);
-        if (taskEl) {
-            // Update content if changed (simple check)
-            if (taskEl.innerHTML !== htmlContent) {
-                taskEl.innerHTML = htmlContent;
-                // Maybe flash it to show update? 
-                // taskEl.style.backgroundColor = '#f0fdf4';
-                // setTimeout(() => taskEl.style.backgroundColor = '', 500);
-            }
-        } else {
-            // Create New
+        if (!taskEl) {
             taskEl = document.createElement('div');
             taskEl.id = `task-${taskId}`;
             taskEl.className = 'card p-2 mb-2 task-item flex justify-between items-center';
             taskEl.style.borderLeft = `4px solid ${getCategoryColor(type)}`;
             taskEl.style.boxShadow = '0 1px 2px rgba(0,0,0,0.05)';
-            // Animation for new task
             taskEl.style.animation = 'slideIn 0.3s ease-out';
-            taskEl.innerHTML = htmlContent;
-
-            // Append (or prepend if we want newest first, but map preserves order from backend)
+            taskEl.innerHTML = `
+                <div class="task-content" style="flex: 1; padding-right: 10px;">
+                    <div class="task-text" style="font-weight: 500; font-size: 0.95rem; cursor: pointer;"></div>
+                    <div class="task-extra"></div>
+                </div>
+                <div class="task-actions flex items-center gap-2"></div>
+            `;
             listEl.appendChild(taskEl);
+        }
+
+        // Update Text
+        const textEl = taskEl.querySelector('.task-text');
+        if (textEl && textEl.textContent !== task.text) {
+            textEl.textContent = task.text;
+            textEl.onclick = () => openEditModal(task._id, task.text.replace(/'/g, "\\'"), type, (task.blockerReason || '').replace(/'/g, "\\'"));
+        }
+
+        // Update Extra Info (Badges, Replies) - Use simple HTML check for simplicity here but scoped
+        const extraEl = taskEl.querySelector('.task-extra');
+        if (extraEl && extraEl.innerHTML !== extraInfo) {
+            extraEl.innerHTML = extraInfo;
+        }
+
+        // Update Actions
+        const actionsEl = taskEl.querySelector('.task-actions');
+        const deleteBtnHtml = `<button onclick="openDeleteModal('${task._id}', event)" class="btn btn-xs" style="background: none; border: none; color: var(--danger-color); font-size: 1.2rem; line-height: 1; cursor: pointer;">&times;</button>`;
+        const finalActionsHtml = actions + deleteBtnHtml;
+        if (actionsEl && actionsEl.innerHTML !== finalActionsHtml) {
+            actionsEl.innerHTML = finalActionsHtml;
         }
     });
 }
@@ -859,7 +863,10 @@ function showMembersModal() {
                             </div>
                             <div class="flex gap-2">
                                 <button onclick="downloadEmployeeReport('${emp._id}', '${emp.name.replace(/'/g, "\\'")}')" class="btn btn-primary btn-sm flex items-center gap-1">
-                                    <span>📄</span> Download Report
+                                    Download Report
+                                </button>
+                                <button onclick="openDeleteUserModal('${emp._id}', '${emp.name.replace(/'/g, "\\'")}')" class="btn btn-outline btn-sm flex items-center gap-1" style="color: var(--danger-color); border-color: var(--danger-color);">
+                                    Delete
                                 </button>
                                 <div class="dropdown-container">
                                     <button class="btn btn-outline btn-sm" onclick="this.nextElementSibling.classList.toggle('hidden')">View Stats ▼</button>
@@ -883,6 +890,47 @@ function showMembersModal() {
 
 function closeMembersModal() {
     document.getElementById('members-modal').classList.add('hidden');
+}
+
+// --- Delete User Logic ---
+let currentDeleteUserId = null;
+
+function openDeleteUserModal(userId, userName) {
+    currentDeleteUserId = userId;
+    document.getElementById('delete-user-name').textContent = userName;
+    document.getElementById('delete-user-modal').classList.remove('hidden');
+}
+
+function closeDeleteUserModal() {
+    document.getElementById('delete-user-modal').classList.add('hidden');
+    currentDeleteUserId = null;
+}
+
+async function confirmDeleteUser() {
+    if (!currentDeleteUserId) return;
+
+    const userId = currentDeleteUserId;
+    const token = localStorage.getItem('token');
+
+    try {
+        const res = await fetch(`${API_URL}/auth/${userId}`, {
+            method: 'DELETE',
+            headers: { 'Authorization': `Bearer ${token}` }
+        });
+
+        const data = await res.json();
+
+        if (!res.ok) throw new Error(data.message || 'Failed to delete user');
+
+        showToast('Employee deleted successfully');
+        closeDeleteUserModal();
+        showMembersModal(); // Refresh list
+        loadManagerDashboard(); // Refresh stats
+
+    } catch (err) {
+        showToast(err.message, 'error');
+        closeDeleteUserModal();
+    }
 }
 
 async function downloadEmployeeReport(employeeId, employeeName) {
@@ -1571,8 +1619,8 @@ function updateManagerView(updates) {
         if (updates.length === 0) {
             feedEl.innerHTML = '<div class="text-center p-4">No updates found from the team.</div>';
         } else {
-            // Remove "No updates" if it exists
-            if (feedEl.querySelector('.text-center')) feedEl.innerHTML = '';
+            // 1. Stable Sort by Name (Frontend)
+            updates.sort((a, b) => a.user.name.localeCompare(b.user.name));
 
             const incomingIds = new Set(updates.map(u => `user-card-${u.user._id}`));
 
@@ -1581,75 +1629,87 @@ function updateManagerView(updates) {
                 if (child.id && !incomingIds.has(child.id)) child.remove();
             });
 
-            updates.forEach(status => {
+            updates.forEach((status, index) => {
                 const cardId = `user-card-${status.user._id}`;
                 let card = document.getElementById(cardId);
-
-                const cardHtml = `
-                    ${status.isMissing ? '<div class="absolute top-2 right-2 badge" style="background: #fee2e2; color: #991b1b; font-weight: bold; border: 1px solid #fecaca;">❌ Missing Update</div>' : ''}
-                    
-                    <div class="flex justify-between items-start mb-3 border-bottom pb-2" style="border-bottom: 1px solid #eee;">
-                        <div>
-                            <h4 style="margin:0; display: flex; items-center gap-2">
-                                ${status.user.name}
-                                ${!status.isMissing ? '<span style="color: #22c55e; font-size: 0.8rem;">● Active</span>' : ''}
-                            </h4>
-                            <span class="text-muted" style="font-size: 0.8rem;">${status.user.email}</span>
-                        </div>
-                        <div class="text-right">
-                            <span class="text-muted text-xs block">Last Active</span>
-                            <span class="font-medium text-xs">${status.date ? new Date(status.date).toLocaleString([], { hour: '2-digit', minute: '2-digit', day: '2-digit', month: 'short' }) : 'Never'}</span>
-                        </div>
-                    </div>
-                    
-                    <div class="flex flex-col gap-2">
-                        <div>
-                            <strong style="color: var(--success-color); font-size: 0.9rem;">✓ Completed</strong>
-                            ${status.completed.length ? `<ul class="pl-4 mt-1">${status.completed.map(t => `<li>${t.text}</li>`).join('')}</ul>` : '<p class="text-muted text-sm italic">None</p>'}
-                        </div>
-                        
-                        ${status.pending.length ? `
-                        <div>
-                            <strong style="font-size: 0.9rem;">⧖ Pending</strong>
-                            <ul class="pl-4 mt-1">
-                                ${status.pending.map(t => `
-                                        <li class="mb-1">
-                                            ${t.text}
-                                            ${t.managerReply ? `<br><span class="text-xs text-primary">↪ Manager: ${t.managerReply}</span>` : ''}
-                                            <button onclick="openReplyModal('${t.id}', '${t.text.replace(/'/g, "\\'")}', '${(t.managerReply || '').replace(/'/g, "\\'")}')" class="btn btn-outline btn-xs ml-2">${t.managerReply ? 'Edit Reply' : 'Reply'}</button>
-                                        </li>
-                                `).join('')}
-                            </ul>
-                        </div>` : ''}
-
-                        ${status.blockers.length ? `
-                        <div style="background: #fef2f2; padding: 0.5rem; border-radius: 4px;">
-                            <strong style="color: var(--danger-color); font-size: 0.9rem;">🚫 Blockers</strong>
-                            <ul class="pl-4 mt-1" style="color: #991b1b;">
-                                ${status.blockers.map(t => `
-                                        <li class="mb-1">
-                                            ${t.text}
-                                            ${t.managerReply ? `<br><span class="text-xs text-primary">↪ Manager: ${t.managerReply}</span>` : ''}
-                                            <button onclick="openReplyModal('${t.id}', '${t.text.replace(/'/g, "\\'")}', '${(t.managerReply || '').replace(/'/g, "\\'")}')" class="btn btn-outline btn-xs ml-2">${t.managerReply ? 'Edit Reply' : 'Reply'}</button>
-                                        </li>
-                                `).join('')}
-                            </ul>
-                        </div>` : ''}
-                    </div>
-                `;
 
                 if (!card) {
                     card = document.createElement('div');
                     card.id = cardId;
                     card.className = 'card p-4 relative mb-4';
                     card.style.animation = 'slideIn 0.3s ease-out';
-                    card.innerHTML = cardHtml;
+                    // Initially append
                     feedEl.appendChild(card);
-                } else if (card.innerHTML !== cardHtml) {
-                    card.innerHTML = cardHtml;
                 }
+
+                // 2. Ensure Correct Order (Position Shuffle Fix)
+                if (feedEl.children[index] !== card) {
+                    feedEl.insertBefore(card, feedEl.children[index]);
+                }
+
+                // Update Missing Badge
+                let badge = card.querySelector('.missing-badge');
+                if (status.isMissing) {
+                    if (!badge) {
+                        badge = document.createElement('div');
+                        badge.className = 'missing-badge absolute top-2 right-2 badge';
+                        badge.style.cssText = 'background: #fee2e2; color: #991b1b; font-weight: bold; border: 1px solid #fecaca;';
+                        badge.textContent = '❌ Missing Update';
+                        card.appendChild(badge);
+                    }
+                } else if (badge) {
+                    badge.remove();
+                }
+
+                // Update Layout if not present (Non-destructive)
+                if (!card.querySelector('.card-header')) {
+                    card.insertAdjacentHTML('beforeend', `
+                        <div class="card-header flex justify-between items-start mb-3 border-bottom pb-2" style="border-bottom: 1px solid #eee;">
+                            <div>
+                                <h4 class="mb-0 flex items-center gap-2">
+                                    <span class="employee-name">${status.user.name}</span>
+                                    <span class="active-dot" style="color: #22c55e; font-size: 0.85rem; font-weight: 500; display: ${!status.isMissing ? 'inline' : 'none'};">● Active</span>
+                                </h4>
+                                <span class="text-muted employee-email" style="font-size: 0.8rem;">${status.user.email}</span>
+                            </div>
+                            <div class="text-right">
+                                <span class="text-muted text-xs block">Last Active</span>
+                                <span class="last-active-time font-medium text-xs"></span>
+                            </div>
+                        </div>
+                        <div class="card-body flex flex-col gap-2"></div>
+                    `);
+                }
+
+                // Update Header Info
+                const nameEl = card.querySelector('.employee-name');
+                const dotEl = card.querySelector('.active-dot');
+                const timeEl = card.querySelector('.last-active-time');
+                const bodyEl = card.querySelector('.card-body');
+
+                if (nameEl && nameEl.textContent !== status.user.name) nameEl.textContent = status.user.name;
+                if (dotEl) dotEl.style.display = !status.isMissing ? 'inline' : 'none';
+
+                const formattedTime = status.date ? new Date(status.date).toLocaleString([], { hour: '2-digit', minute: '2-digit', day: '2-digit', month: 'short' }) : 'Never';
+                if (timeEl && timeEl.textContent !== formattedTime) timeEl.textContent = formattedTime;
+
+                // Update Card Style
                 card.style.borderLeft = status.isMissing ? '4px solid #ef4444' : 'none';
                 card.style.background = status.isMissing ? '#fffcfc' : 'white';
+
+                // Render Task Body Surgically
+                if (bodyEl) {
+                    if (!status.date) {
+                        if (bodyEl.innerHTML !== '<div class="text-center p-2 text-muted italic" style="font-size: 0.85rem;">No activity recorded yet</div>') {
+                            bodyEl.innerHTML = '<div class="text-center p-2 text-muted italic" style="font-size: 0.85rem;">No activity recorded yet</div>';
+                        }
+                    } else {
+                        // Surgical list updates for Completed, Pending, Blockers
+                        renderSurgicalTaskList(bodyEl, 'Completed', status.completed, 'var(--success-color)', status.user._id);
+                        renderSurgicalTaskList(bodyEl, 'Pending', status.pending, 'var(--text-color)', status.user._id);
+                        renderSurgicalTaskList(bodyEl, 'Blockers', status.blockers, 'var(--danger-color)', status.user._id);
+                    }
+                }
             });
         }
     }
@@ -1710,32 +1770,89 @@ function updateManagerView(updates) {
                 el.style.borderLeft = `4px solid ${item.type === 'missing' ? '#ef4444' : 'var(--warning-color)'}`;
             });
         }
-
-        const missingCount = attentionList.filter(i => i.type === 'missing').length;
-        const badgeEl = document.getElementById('missing-count-badge');
-        if (badgeEl && badgeEl.textContent !== missingCount.toString()) {
-            badgeEl.textContent = missingCount;
-        }
     }
 }
 
-// We need to extract the render logic from loadManagerDashboard to reuse it with polling data
-// But to avoid huge refactor, let's just call loadManagerDashboard() in the interval usually.
-// However, to support Notification, we need to intercept.
-// Let's stick to the previous plan: simple polling calling the main functions, 
-// AND specialized notification check? No, that double fetches.
+/**
+ * Surgically updates a task list within a card body.
+ */
+function renderSurgicalTaskList(container, title, tasks, titleColor, userId) {
+    let section = container.querySelector(`.task-section-${title}`);
+    if (!section) {
+        section = document.createElement('div');
+        section.className = `task-section-${title}`;
+        section.innerHTML = `
+            <strong style="color: ${titleColor}; font-size: 0.9rem;">${title === 'Completed' ? '✓' : title === 'Pending' ? '⧖' : '🚫'} ${title}</strong>
+            <ul class="task-list pl-0 mt-1" style="list-style: none;"></ul>
+            <p class="no-tasks-msg text-muted text-sm italic hidden">None</p>
+        `;
+        container.appendChild(section);
+    }
 
-// REVISED PLAN:
-// Just call the main load functions in the interval.
-// Update the main load functions to check for "New" items compared to a global state.
+    const listEl = section.querySelector('.task-list');
+    const msgEl = section.querySelector('.no-tasks-msg');
 
-// Let's override checkForManagerUpdates to just call loadManagerDashboard for now 
-// to meet the "update without refresh" requirement perfectly.
-// For notifications, we add a check AFTER render.
+    if (tasks.length === 0) {
+        section.classList.add('hidden');
+        listEl.innerHTML = '';
+    } else {
+        section.classList.remove('hidden');
 
-// Redefine the interval to just use the main loaders, 
-// but we need to inject the "Notification" logic into them or wrap them.
+        const incomingIds = new Set(tasks.map(t => `mgr-task-${t.id || t._id}`));
+
+        // Remove old tasks
+        Array.from(listEl.children).forEach(child => {
+            if (!incomingIds.has(child.id)) child.remove();
+        });
+
+        tasks.forEach(t => {
+            const taskId = `mgr-task-${t.id || t._id}`;
+            let item = document.getElementById(taskId);
+
+            const itemHtml = `
+                ${t.text}
+                ${t.managerReply ? `<br><span class="text-xs text-primary">↪ Manager: ${t.managerReply}</span>` : ''}
+                ${title === 'Completed' ?
+                    `<button onclick="openReplyModal('${t.id || t._id}', '${t.text.replace(/'/g, "\\'")}', '${(t.managerReply || '').replace(/'/g, "\\'")}')" class="btn btn-outline btn-xs ml-2" style="border: none; padding: 0 5px; font-size: 0.8rem; color: var(--primary-color);">
+                        ${t.managerReply ? '✎ Edit Feedback' : '💬 Feedback'}
+                    </button>`
+                    : ''}
+            `;
+
+            if (!item) {
+                item = document.createElement('li');
+                item.id = taskId;
+                item.className = 'mb-1';
+                item.innerHTML = itemHtml;
+                listEl.appendChild(item);
+            } else if (item.innerHTML !== itemHtml) {
+                item.innerHTML = itemHtml;
+            }
+        });
+    }
+
+    // Blockers specific styling
+    if (title === 'Blockers') {
+        section.style.background = tasks.length > 0 ? '#fef2f2' : 'transparent';
+        section.style.padding = tasks.length > 0 ? '0.5rem' : '0';
+        section.style.borderRadius = '4px';
+    }
+}
 
 function playNotificationSound() {
     // beep
 }
+// --- Connectivity Check ---
+(async function checkBackend() {
+    try {
+        const res = await fetch(`${API_URL}`);
+        if (res.ok) {
+            console.log('Backend connected');
+        } else {
+            showToast('Backend reachable but returned error', 'error');
+        }
+    } catch (e) {
+        showToast('Cannot connect to server. Please ensure backend is running.', 'error');
+        console.error('Backend connection failed:', e);
+    }
+})();

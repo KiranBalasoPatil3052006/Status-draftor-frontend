@@ -111,7 +111,6 @@
                             <p class="text-sm text-muted">Inbox (Blocked)</p>
                             <h2 id="pending-blockers" class="m-0" style="color: var(--danger-color);">0</h2>
                         </div>
-                        <div style="font-size: 1.5rem;">🔔</div>
                     </div>
                 </div>
 
@@ -138,9 +137,6 @@
                         <div class="h-px bg-gray-200 flex-1 ml-2"></div>
                     </div>
                     <div id="team-feed" class="flex flex-col gap-4">
-                        <div class="text-center p-8 text-muted bg-gray-50 rounded border border-dashed">
-                            Loading team activity...
-                        </div>
                     </div>
                 </div>
 
@@ -157,7 +153,6 @@
                         </div>
                     </div>
                     <div id="missing-updates-list" class="flex flex-col gap-3">
-                        <div class="text-center p-4 text-muted text-sm italic">Checking attendance...</div>
                     </div>
                 </div>
             </div>
@@ -233,6 +228,22 @@
             </div>
         </div>
     </main>
+
+    <!-- Delete User Confirmation Modal -->
+    <div id="delete-user-modal" class="hidden"
+        style="position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); display: flex; align-items: center; justify-content: center; z-index: 1300;">
+        <div class="card p-6 flex flex-col items-center text-center" style="width: 90%; max-width: 400px;">
+            
+            <h3 class="mb-2">Delete Employee?</h3>
+            <p class="mb-6 text-muted">Are you sure you want to delete <span id="delete-user-name"
+                    class="font-bold"></span>? This action cannot be undone.</p>
+            <div class="flex gap-4 w-full">
+                <button onclick="closeDeleteUserModal()" class="btn btn-outline w-full">Cancel</button>
+                <button onclick="confirmDeleteUser()" class="btn w-full"
+                    style="background: var(--danger-color); color: white; border-color: var(--danger-color);">Delete</button>
+            </div>
+        </div>
+    </div>
 
     <!-- Reply Modal -->
     <div id="reply-modal" class="hidden"
